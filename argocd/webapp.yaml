@@ -1,0 +1,46 @@
+# ArgoCD Application manifest
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: webapp
+  namespace: argocd
+  labels:
+    app: webapp
+
+spec:
+  # Project configuration
+  project: default
+  
+  # Source configuration
+  source:
+    # Git repository containing your Helm chart
+    repoURL: https://gitlab.matanweisz.xyz/matanweisz/helm-charts.git
+    targetRevision: HEAD
+    path: /webapp     # Path to the webapp Helm chart in the repo
+    
+    # Helm configuration
+    helm:
+      # Values file to use
+      valueFiles:
+        - values.yaml
+  
+  # Destination configuration
+  destination:
+    server: https://kubernetes.default.svc  # Target cluster (in-cluster)
+    namespace: webapp                       # Target namespace
+  
+  # Sync policy configuration
+  syncPolicy:
+    # Automated sync settings
+    automated:
+      prune: true      # Remove resources not defined in Git
+      selfHeal: true   # Correct drift automatically
+
+    # Sync options
+    syncOptions:
+      - CreateNamespace=true    # Create namespace if it doesn't exist
+      - Validate=true           # Validate manifests before applying
+
+  # Revision history limit
+  revisionHistoryLimit: 3  # Keep 3 previous revisions for rollback
