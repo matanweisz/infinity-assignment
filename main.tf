@@ -43,64 +43,63 @@ module "vpc" {
   availability_zone_2 = "eu-central-1b"
 }
 
-## Create the EKS Cluster
-#module "eks" {
-#  source          = "terraform-aws-modules/eks/aws"
-#  version         = "20.37.0"
-#  cluster_name    = "${local.project_name}-eks"
-#  cluster_version = "1.32"
-#  subnet_ids      = module.vpc.private_subnet_ids
-#  vpc_id          = module.vpc.vpc_id
-#
-#  enable_irsa = true
-#
-#  eks_managed_node_groups = {
-#    default_node_group = {
-#      instance_types = ["t3.medium"]
-#      desired_size   = 1
-#      min_size       = 1
-#      max_size       = 3
-#    }
-#  }
-#
-#  cluster_endpoint_private_access = true
-#  cluster_endpoint_public_access  = false
-#
-#  tags = {
-#    Environment = "dev"
-#    Project     = local.project_name
-#  }
-#}
-#
-## Provides the EKS Cluster Context automatically
-#resource "null_resource" "cluster_context" {
-#  provisioner "local-exec" {
-#    command = "aws eks update-kubeconfig --region $REGION --name $CLUSTER"
-#    environment = {
-#      REGION  = "eu-central-1"
-#      CLUSTER = module.eks.cluster_name
-#    }
-#  }
-#  depends_on = [module.eks]
-#}
-#
-## AWS Load Balancer Controller IAM Role Service Account (IRSA)
-#module "alb_irsa" {
-#  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-#  version = "5.58.0"
-#
-#  role_name_prefix                       = "${local.project_name}-alb-ingress"
-#  attach_load_balancer_controller_policy = true
-#
-#  oidc_providers = {
-#    main = {
-#      provider_arn               = module.eks.oidc_provider_arn
-#      namespace_service_accounts = ["kube-system:aws-load-balancer-controller"]
-#    }
-#  }
-#  depends_on = [module.eks]
-#}
+# Create the EKS Cluster
+module "eks" {
+  source          = "terraform-aws-modules/eks/aws"
+  version         = "20.37.0"
+  cluster_name    = "${local.project_name}-eks"
+  cluster_version = "1.32"
+  subnet_ids      = module.vpc.private_subnet_ids
+  vpc_id          = module.vpc.vpc_id
 
+  enable_irsa = true
+
+  eks_managed_node_groups = {
+    default_node_group = {
+      instance_types = ["t3.medium"]
+      desired_size   = 1
+      min_size       = 1
+      max_size       = 3
+    }
+  }
+
+  cluster_endpoint_private_access = true
+  cluster_endpoint_public_access  = false
+
+  tags = {
+    Environment = "dev"
+    Project     = local.project_name
+  }
+}
+
+# Provides the EKS Cluster Context automatically
+resource "null_resource" "cluster_context" {
+  provisioner "local-exec" {
+    command = "aws eks update-kubeconfig --region $REGION --name $CLUSTER"
+    environment = {
+      REGION  = "eu-central-1"
+      CLUSTER = module.eks.cluster_name
+    }
+  }
+  depends_on = [module.eks]
+}
+
+# AWS Load Balancer Controller IAM Role Service Account (IRSA)
+module "alb_irsa" {
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version = "5.58.0"
+
+  role_name_prefix                       = "${local.project_name}-alb-ingress"
+  attach_load_balancer_controller_policy = true
+
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:aws-load-balancer-controller"]
+    }
+  }
+  depends_on = [module.eks]
+}
 
 # Security Group for GitLab EC2 Instance
 module "security_group_gitlab" {

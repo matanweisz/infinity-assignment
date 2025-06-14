@@ -1,4 +1,4 @@
-# Post-Terraform Setup: EKS + ALB Ingress + ArgoCD
+# Post-Terraform Setup: ArgoCD + ALB Ingress
 
 1. Install AWS ALB Ingress Controller:
 ```bash
@@ -11,7 +11,7 @@ helm upgrade --install aws-load-balancer-controller eks/aws-load-balancer-contro
   --set serviceAccount.create=false \
   --set serviceAccount.name=aws-load-balancer-controller \
   --set region=eu-central-1 \
-  --set vpcId=<YOUR_VPC_ID> \
+  --set vpcId=vpc-07f267d85d41badfe \
   --set ingressClass=alb
 ```
 
