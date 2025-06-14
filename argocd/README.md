@@ -1,9 +1,15 @@
 # Post-Terraform Setup: ArgoCD + ALB Ingress
 
-First: Set Up `kubectl` Access, then install the AWS ALB Ingress Controller and ArgoCD.
-Run this command to configure access to the EKS cluster:
+Access a Bastion Host that have AWS CLI, kubectl, Helm and access to the cluster endpoint.
+
+Set Up `kubectl` Access To The EKS Cluster:
 ```bash
 aws eks update-kubeconfig --region eu-central-1 --name infinity-assignment-eks
+```
+
+Create a Service Account for the AWS Load Balancer Controller:
+```bash
+kubectl apply -f alb-serviceaccount.yaml
 ```
 
 Install AWS ALB Ingress Controller:

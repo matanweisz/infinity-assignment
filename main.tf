@@ -48,11 +48,14 @@ module "eks" {
   source          = "terraform-aws-modules/eks/aws"
   version         = "20.37.0"
   cluster_name    = "${local.project_name}-eks"
-  cluster_version = "1.32"
+  cluster_version = "1.33"
   subnet_ids      = module.vpc.private_subnet_ids
   vpc_id          = module.vpc.vpc_id
 
   enable_irsa = true
+
+  cluster_endpoint_private_access = true
+  cluster_endpoint_public_access  = false
 
   eks_managed_node_groups = {
     default_node_group = {
@@ -62,9 +65,6 @@ module "eks" {
       max_size       = 3
     }
   }
-
-  cluster_endpoint_private_access = true
-  cluster_endpoint_public_access  = false
 
   tags = {
     Environment = "dev"
@@ -87,6 +87,11 @@ module "alb_irsa" {
     }
   }
   depends_on = [module.eks]
+}
+
+output "alb_irsa_role_arn" {
+  description = "IAM Role ARN for AWS Load Balancer Controller IRSA"
+  value       = module.alb_irsa.iam_role_arn
 }
 
 # Security Group for GitLab EC2 Instance
