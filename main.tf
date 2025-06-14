@@ -72,18 +72,6 @@ module "eks" {
   }
 }
 
-# Provides the EKS Cluster Context automatically
-resource "null_resource" "cluster_context" {
-  provisioner "local-exec" {
-    command = "aws eks update-kubeconfig --region $REGION --name $CLUSTER"
-    environment = {
-      REGION  = "eu-central-1"
-      CLUSTER = module.eks.cluster_name
-    }
-  }
-  depends_on = [module.eks]
-}
-
 # AWS Load Balancer Controller IAM Role Service Account (IRSA)
 module "alb_irsa" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"

@@ -1,6 +1,12 @@
 # Post-Terraform Setup: ArgoCD + ALB Ingress
 
-1. Install AWS ALB Ingress Controller:
+First: Set Up `kubectl` Access, then install the AWS ALB Ingress Controller and ArgoCD.
+Run this command to configure access to the EKS cluster:
+```bash
+aws eks update-kubeconfig --region eu-central-1 --name infinity-assignment-eks
+```
+
+Install AWS ALB Ingress Controller:
 ```bash
 helm repo add eks https://aws.github.io/eks-charts
 helm repo update
@@ -15,7 +21,7 @@ helm upgrade --install aws-load-balancer-controller eks/aws-load-balancer-contro
   --set ingressClass=alb
 ```
 
-2. Install ArgoCD:
+Install ArgoCD:
 ```bash
 kubectl create namespace argocd
 
@@ -25,16 +31,16 @@ helm repo update
 helm install argocd argo/argo-cd -n argocd
 ```
 
-3. Expose ArgoCD via the ALB Ingress:
+Expose ArgoCD via the ALB Ingress:
 ```bash
 kubectl apply -f argocd-ingress.yaml
 ```
 
-4. Get ArgoCD Admin Password:
+Get ArgoCD Admin Password:
 ```bash
 kubectl get secret argocd-initial-admin-secret -n argocd -o jsonpath="{.data.password}" | base64 --decode; echo
 ```
 
-5. Access ArgoCD:
-   - Navigate in your browser to the URL: `https://argocd.matanweisz.xyz`
-   - Login with username `admin` and the password obtained in the previous step.
+Access ArgoCD:
+    - Navigate in your browser to the URL: `https://argocd.matanweisz.xyz`
+    - Login with username `admin` and the password obtained in the previous step.
