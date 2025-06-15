@@ -1,3 +1,19 @@
+# Vault Instance - Docker Compose Setup
+
+This directory contains the docker compose file required to run a Vault instance on an EC2 instance.
+
+## Overview
+
+The provided `docker-compose.yml` file sets up a self-hosted Vault secret manager server.
+This instance is used to manage secrets and sensitive data securely.
+
+## Requirements
+
+- An AWS EC2 instance. 
+- Docker and Docker Compose installed on the instance.
+
+## Usage
+
 Start Vault with:
 ```bash
 sudo docker compose up -d

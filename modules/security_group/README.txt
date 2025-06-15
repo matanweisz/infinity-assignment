@@ -10,12 +10,11 @@ Folder Structure:
 │   │   ├── main.tf        # Security group resource
 │   │   ├── variables.tf   # Input variables for customization
 │   │   ├── outputs.tf     # Outputs for referencing module values
-│── README.txt
 
 
 How to Use the Module:
 
-1. Call the Module in Your 'main.tf' File
+# Call the Module in Your 'main.tf' File
 Add the following to your Terraform configuration:
 
 module "security_group" {
@@ -37,7 +36,7 @@ module "security_group" {
 }
 
 
-2. Input Variables
+# Input Variables
 You can customize this module by providing different values for the variables below.
 
 | **Variable**      | **Description**                           | **Type**  | **Default** |
@@ -50,7 +49,7 @@ You can customize this module by providing different values for the variables be
 | `extra_tags`    | Additional tags for the SG                | `map(string)` | `{}` |
 
 
-3. Default Ingress Rules
+# Default Ingress Rules
 By default, the module allows the following inbound traffic:
 
 ingress_rules = [
@@ -60,7 +59,7 @@ ingress_rules = [
 ]
 
 
-4. Default Egress Rules
+# Default Egress Rules
 All outbound traffic is allowed by default:
 
 egress_rules = [
@@ -68,7 +67,7 @@ egress_rules = [
 ]
 
 
-5. Outputs
+# Outputs
 Once the module is applied, you can reference the created Security Group ID using:
 
 | **Output Name**      | **Description**                       |
