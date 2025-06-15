@@ -19,8 +19,3 @@ It includes the necessary configurations for GitLab, such as ports, volumes, and
 ```bash
 docker compose up -d
 ```
-
-**Stop GitLab:**
-```bash
-docker compose down
-```

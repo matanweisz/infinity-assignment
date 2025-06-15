@@ -1,3 +1,4 @@
+# This file defines an ArgoCD Application for deploying GitLab Runner on a Kubernetes cluster.
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
