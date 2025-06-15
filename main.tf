@@ -60,9 +60,9 @@ module "eks" {
   eks_managed_node_groups = {
     default_node_group = {
       instance_types = ["t3.medium"]
-      desired_size   = 1
+      desired_size   = 2
       min_size       = 1
-      max_size       = 3
+      max_size       = 4
     }
   }
 
@@ -70,28 +70,6 @@ module "eks" {
     Environment = "dev"
     Project     = local.project_name
   }
-}
-
-# AWS Load Balancer Controller IAM Role Service Account (IRSA)
-module "alb_irsa" {
-  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version = "5.58.0"
-
-  role_name_prefix                       = "${local.project_name}-alb-ingress"
-  attach_load_balancer_controller_policy = true
-
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:aws-load-balancer-controller"]
-    }
-  }
-  depends_on = [module.eks]
-}
-
-output "alb_irsa_role_arn" {
-  description = "IAM Role ARN for AWS Load Balancer Controller IRSA"
-  value       = module.alb_irsa.iam_role_arn
 }
 
 # Security Group for GitLab EC2 Instance

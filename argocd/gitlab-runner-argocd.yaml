@@ -1,0 +1,74 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gitlab-runner
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://charts.gitlab.io
+    chart: gitlab-runner
+    targetRevision: 0.77.3
+    helm:
+      values: |
+        gitlabUrl: http://10.0.3.11
+        runnerRegistrationToken: "glrt-Vvw1FNK6fXivu-KUgMhjoXQ6MQp1OjEH.01.0w0m75wn4"
+
+        concurrent: 4
+        checkInterval: 30
+
+        runners:
+          privileged: true
+
+        config: |
+          [[runners]]
+            name = "k8s-runner"
+            url = "infinity-assignment-alb-1702380324.eu-central-1.elb.amazonaws.com"
+            token = "glrt-Vvw1FNK6fXivu-KUgMhjoXQ6MQp1OjEH.01.0w0m75wn4"
+            executor = "kubernetes"
+            [runners.kubernetes]
+              image = "docker:24.0.5"
+              privileged = true
+              namespace = "gitlab-runner"
+
+        rbac:
+          create: true
+          rules:
+            - apiGroups: [""]
+              resources: ["pods"]
+              verbs: ["list", "get", "watch", "create", "delete"]
+            - apiGroups: [""]
+              resources: ["pods/exec"]
+              verbs: ["create"]
+            - apiGroups: [""]
+              resources: ["pods/attach"]
+              verbs: ["list", "get", "create", "delete", "update"]
+            - apiGroups: [""]
+              resources: ["pods/log"]
+              verbs: ["get"]
+            - apiGroups: [""]
+              resources: ["secrets"]
+              verbs: ["list", "get", "create", "delete", "update", "patch"]
+            - apiGroups: [""]
+              resources: ["configmaps"]
+              verbs: ["list", "get", "create", "delete"]
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: gitlab-runner
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+

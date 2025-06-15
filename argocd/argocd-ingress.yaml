@@ -5,15 +5,23 @@ metadata:
   name: argocd-server-ingress
   namespace: argocd
   annotations:
+    # AWS Load Balancer Controller annotations
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
+    
+    # SSL/TLS Configuration
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
     alb.ingress.kubernetes.io/ssl-redirect: '443'
     alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:eu-central-1:536697238781:certificate/8607b974-4f40-4469-b9d0-2ce7aae96a19
-    alb.ingress.kubernetes.io/backend-protocol: HTTP
+    
+    # Health check configuration for ArgoCD
     alb.ingress.kubernetes.io/healthcheck-path: /healthz
     alb.ingress.kubernetes.io/healthcheck-protocol: HTTP
-    alb.ingress.kubernetes.io/success-codes: "200"
+    alb.ingress.kubernetes.io/healthcheck-port: '8080'
+    
+    # Backend protocol (HTTP since ArgoCD server runs with --insecure)
+    alb.ingress.kubernetes.io/backend-protocol: HTTP
+    
 spec:
   ingressClassName: alb
   rules:
