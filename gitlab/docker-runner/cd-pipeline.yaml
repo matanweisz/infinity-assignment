@@ -1,0 +1,47 @@
+---
+stages:
+  - update-and-commit
+
+variables:
+  # Values file to update
+  VALUES_FILE: "./webapp/values.yaml"
+  GIT_STRATEGY: clone
+  GIT_DEPTH: 0
+
+# Single stage: Update image tag and commit
+update-and-commit:
+  stage: update-and-commit
+  image: alpine:3.18
+  before_script:
+    # Install required tools
+    - apk add --no-cache git yq
+    # Configure git
+    - git config --global user.email "gitlab-ci@${CI_SERVER_HOST}"
+    - git config --global user.name "GitLab CI"
+    # Set up GitLab remote with token for authentication
+    - git remote set-url origin https://oauth2:${GITLAB_TOKEN}@gitlab.matanweisz.xyz/matanweisz/helm-charts.git
+    # Ensure we're on main branch
+    - git checkout main
+    - git pull origin main
+  script:
+    # Show current image tag
+    - echo "Current image tag:"
+    - yq eval '.image.tag' ${VALUES_FILE}
+    
+    # Update the image tag
+    - echo "Updating image tag to ${WEBAPP_TAG}"
+    - yq eval '.image.tag = "'"${WEBAPP_TAG}"'"' -i ${VALUES_FILE}
+    
+    # Show updated image tag
+    - echo "Updated image tag:"
+    - yq eval '.image.tag' ${VALUES_FILE}
+    
+    # Add, commit and push changes
+    - git add ${VALUES_FILE}
+    - git commit -m "Update webapp image tag to ${WEBAPP_TAG}"
+    - git push origin main
+    
+    - echo "Successfully updated and committed image tag change"
+  rules:
+    # Only run when triggered with the required variable
+    - if: '$WEBAPP_TAG != null'
