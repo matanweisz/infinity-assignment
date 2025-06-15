@@ -1,0 +1,49 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gitlab-runner
+  namespace: argocd
+spec:
+  project: default
+  
+  source:
+    repoURL: https://charts.gitlab.io
+    chart: gitlab-runner
+    targetRevision: 0.58.2
+    
+    helm:
+      values: |
+        # GitLab connection configuration
+        gitlabUrl: http://10.0.3.11
+        runnerRegistrationToken: "glrt-FKEMcZRlAq-pMlYPLAR3mHQ6MQp1OjEH.01.0w1gry20u"
+        
+        # Run all jobs including untagged ones
+        runners:
+          runUntagged: true
+          privileged: false
+          kubernetes:
+            imagePullPolicy: IfNotPresent
+          
+            # Service account for job pods
+            serviceAccount: gitlab-runner
+
+        # RBAC configuration for runner permissions
+        rbac:
+          create: true
+
+        # Service account configuration
+        serviceAccount:
+          create: true
+          name: gitlab-runner
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: gitlab-runner
+    
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    automated:
+      prune: true
+      selfHeal: true
