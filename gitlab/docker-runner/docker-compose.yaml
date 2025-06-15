@@ -1,0 +1,11 @@
+# This is a Docker Compose file for setting up a GitLab Runner as a container
+# It allows you to run CI/CD jobs in a Docker in Docker environment
+---
+services:
+  gitlab-runner:
+    image: gitlab/gitlab-runner:latest
+    container_name: gitlab-runner
+    restart: always
+    volumes:
+      - ./config:/etc/gitlab-runner
+      - /var/run/docker.sock:/var/run/docker.sock
