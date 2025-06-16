@@ -2,11 +2,14 @@
 
 This directory contains all configuration files and resources used to provision and configure this project I created for InfinityLabs R&D.
 
+## Project UML Diagram
+![UML Diagram](uml/infinitylabs-project-uml.drawio.png)
+
 ## Project Overview
 
 The goal of this project is to run a Node.js web application with the following components:
 
-- **GitLab Instance**: For source control and CI/CD pipelines.
+- **GitLab Instance**: For source code and CI/CD pipelines, contains the webapp and helm-charts directories.
 - **Vault Instance**: For secret management, used in the application docker image build process.
 - **ArgoCD**: For GitOps-based continuous deployment of the web application.
 - **Node.js Web App**: A simple web application.
