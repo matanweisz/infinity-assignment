@@ -9,33 +9,28 @@ metadata:
     app: webapp
 
 spec:
-  # Project configuration
   project: default
-  
-  # Source configuration
   source:
     # Git repository containing your Helm chart
     repoURL: https://gitlab.matanweisz.xyz/matanweisz/helm-charts.git
     targetRevision: HEAD
-    path: /webapp     # Path to the webapp Helm chart in the repo
+    path: ./webapp
     
     # Helm configuration
     helm:
-      # Values file to use
       valueFiles:
         - values.yaml
-  
+
   # Destination configuration
   destination:
-    server: https://kubernetes.default.svc  # Target cluster (in-cluster)
-    namespace: webapp                       # Target namespace
+    server: https://kubernetes.default.svc
+    namespace: webapp
   
-  # Sync policy configuration
+  # Sync configuration
   syncPolicy:
-    # Automated sync settings
     automated:
-      prune: true      # Remove resources not defined in Git
-      selfHeal: true   # Correct drift automatically
+      prune: true
+      selfHeal: true
 
     # Sync options
     syncOptions:
