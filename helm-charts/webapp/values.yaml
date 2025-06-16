@@ -1,0 +1,45 @@
+# Application configuration
+app:
+  name: webapp
+# Docker image configuration
+image:
+  repository: registry.matanweisz.xyz/matanweisz/webapp
+  tag: "1aca6b87"
+# Deployment configuration
+replicaCount: 2 # Number of pod replicas for high availability
+# Container configuration
+container:
+  port: 3000
+# Health check configuration
+healthCheck:
+  # Liveness probe - checks if container is alive
+  livenessProbe:
+    path: /health
+    port: 3000
+    initialDelaySeconds: 30 # Wait 30s before first check
+    periodSeconds: 10 # Check every 10s
+    timeoutSeconds: 5 # Timeout after 5s
+    failureThreshold: 3 # Fail after 3 consecutive failures
+    successThreshold: 1 # Success after 1 successful check
+  # Readiness probe - checks if container is ready to receive traffic
+  readinessProbe:
+    path: /health
+    port: 3000
+    initialDelaySeconds: 30 # Wait 30s before first check
+    periodSeconds: 5 # Check every 5s
+    timeoutSeconds: 3 # Timeout after 3s
+    failureThreshold: 3 # Fail after 3 consecutive failures
+    successThreshold: 1 # Success after 1 successful check
+# Service configuration
+service:
+  type: ClusterIP # Internal service type (ALB will handle external access)
+  port: 80 # Service port
+  targetPort: 3000 # Container port
+# Ingress configuration for AWS ALB Controller
+ingress:
+  className: "alb"
+  host: "webapp.matanweisz.xyz" # Hostname for the ALB
+  certificateArn: "arn:aws:acm:eu-central-1:536697238781:certificate/8607b974-4f40-4469-b9d0-2ce7aae96a19"
+# Registry pull secret
+imagePullSecret:
+  dockerconfigjson: "eyJhdXRocyI6eyJyZWdpc3RyeS5tYXRhbndlaXN6Lnh5eiI6eyJ1c2VybmFtZSI6Im1hdGFud2Vpc3oiLCJwYXNzd29yZCI6ImdscGF0LXlXZ1Iyc0FYOXRzeGdqeG1ZSlg4IiwiYXV0aCI6ImJXRjBZVzUzWldsemVqcG5iSEJoZEMxNVYyZFNNbk5CV0RsMGMzaG5hbmh0V1VwWU9BPT0ifX19"

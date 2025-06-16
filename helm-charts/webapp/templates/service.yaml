@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.app.name }}-service
+  namespace: {{ .Release.Namespace }}
+spec:
+  # Service type - ClusterIP for internal access (ALB will handle external access)
+  type: {{ .Values.service.type }}
+  selector:
+    app: {{ .Chart.Name }} 
+  
+  # Service ports configuration
+  ports:
+    - port: {{ .Values.service.port }}             # Port exposed by the service
+      targetPort: {{ .Values.service.targetPort }} # Port on the container
+      protocol: TCP
+      name: http

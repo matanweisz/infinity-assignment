@@ -1,0 +1,13 @@
+{
+  "name": "webapp",
+  "version": "1.0.0",
+  "description": "A Node.js web application with health check endpoint",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "author": "Matan Weisz",
+  "dependencies": {
+    "express": "5.1.0"
+  }
+}

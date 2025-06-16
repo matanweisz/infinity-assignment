@@ -1,0 +1,47 @@
+# GitOps CD Pipeline - Update Helm values
+---
+stages:
+  - update-and-commit
+
+variables:
+  VALUES_FILE: "./webapp/values.yaml"
+  GIT_STRATEGY: clone
+  GIT_DEPTH: 0 # Include full commit history to avoid errors on push
+
+# Update image tag and commit to trigger ArgoCD sync
+update-and-commit:
+  stage: update-and-commit
+  image: alpine:3.18
+  before_script:
+    # Install git and yq for YAML manipulation
+    - apk add --no-cache git yq  
+    
+    # Ensure WEBAPP_TAG is set from the CI/CD variables
+    - export WEBAPP_TAG="$TAG"
+
+    # Configure git with CI identity 
+    - git config --global user.email "gitlab-ci@gitlab.matanweisz.xyz"
+    - git config --global user.name "GitLab CI"
+
+    # Set up authenticated remote (use internal GitLab hostname)
+    - git remote set-url origin https://oauth2:${GITLAB_TOKEN}@gitlab.matanweisz.xyz/matanweisz/helm-charts.git
+    
+    # Ensure on main branch
+    - git checkout main
+    - git pull origin main
+  script:
+    # Update image tag
+    - echo "Updating image tag to ${WEBAPP_TAG}"
+    
+    # Use yq to update the image tag in the Helm values file
+    - yq eval '.image.tag = "'"${WEBAPP_TAG}"'"' -i ${VALUES_FILE}
+    - echo "Image tag updated"
+    
+    # Commit and push changes
+    - git add ${VALUES_FILE}
+    - git commit -m "Update webapp image tag to ${WEBAPP_TAG}"
+    - git push origin main
+    - echo "Successfully updated and committed image tag change"
+  rules:
+    # Only run when triggered with the required WEBAPP_TAG variable
+    - if: '$WEBAPP_TAG != null'

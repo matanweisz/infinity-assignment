@@ -1,0 +1,104 @@
+# This CI pipeline is for building, testing, and deploying a Docker image.
+# I am using Buildah as a container image builder.
+---
+stages:
+  - build
+  - test
+  - deploy
+
+variables:
+  IMAGE: "$CI_REGISTRY/$CI_PROJECT_PATH"
+  TAG: $CI_COMMIT_SHORT_SHA
+
+# Build container image using Buildah
+build:
+  stage: build
+  image: quay.io/buildah/stable:latest
+  before_script:
+    # Install jq for JSON parsing
+    - microdnf install -y jq
+
+    # Set environment variables for Vault authentication
+    - export VAULT_ADDR="http://10.0.3.136:8200"
+    
+    # Authenticate to Vault with AppRole
+    - echo "Authenticating to Vault..."
+    - |
+      VAULT_TOKEN=$(curl --fail --silent --request POST \
+      --data '{"role_id":"'$VAULT_ROLE_ID'", "secret_id":"'$VAULT_SECRET_ID'"}' \
+      "$VAULT_ADDR/v1/auth/approle/login" | jq -r '.auth.client_token') || {
+        echo "Failed to authenticate with Vault"
+        exit 1
+      }
+    
+    # Retrieve secret
+    - echo "Retrieving secret from Vault..."
+    - |
+      SECRET_VALUE=$(curl --fail --silent --header "X-Vault-Token: $VAULT_TOKEN" \
+      "$VAULT_ADDR/v1/secret/data/project-secret" | jq -r '.data.data.Assignment') || {
+        echo "Failed to retrieve secret from Vault"
+        exit 1
+      }
+    - echo "Secret pulled successfully from Vault"
+    - export SECRET_VALUE
+
+    # Set environment variables for Buildah
+    - export STORAGE_DRIVER=vfs
+    - export BUILDAH_ISOLATION=chroot
+
+    # Login to container registry
+    - buildah login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" 
+  script:
+    # Build the container image with the secret as a build argument
+    - buildah build --build-arg ASSIGNMENT_SECRET="$SECRET_VALUE" -t "$IMAGE:build" .
+    - buildah push "$IMAGE:build"
+
+# test stage
+test:
+  stage: test
+  image: quay.io/buildah/stable:latest
+  before_script:
+    # Install jq for JSON parsing
+    - microdnf install -y jq
+      
+    # Set environment variables for Buildah
+    - export storage_driver=vfs
+    - export buildah_isolation=chroot
+    
+    # Login to container registry
+    - buildah login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD"
+  script:
+    # Pull the built image
+    - buildah pull "$IMAGE:build"
+    - echo "Pulled image successfully"
+    
+    # Test if the secret is set to "Complete"
+    - |
+      if buildah inspect "$IMAGE:build" | grep -q 'ASSIGNMENT_SECRET=Complete'; then
+        echo "Assignment secret successfully set to 'Complete'"
+      else
+        echo "Test Failed, Assignment secret is not 'Complete'"
+        exit 1
+      fi
+    - echo "Test passed successfully"
+
+    # Tag and push production images
+    - buildah tag "$IMAGE:build" "$IMAGE:latest"
+    - buildah tag "$IMAGE:build" "$IMAGE:$TAG"
+    - echo "Tagged image as latest and with commit SHA $TAG"
+
+    # Push the tagged images to the registry
+    - buildah push "$IMAGE:latest"
+    - buildah push "$IMAGE:$TAG"
+
+# Deploy stage - triggers the CD pipeline of the helm-charts repository
+trigger-cd:
+  stage: deploy
+  trigger:
+    project: matanweisz/helm-charts
+    branch: main
+    strategy: depend
+    forward:
+      pipeline_variables: true
+  variables:
+    WEBAPP_TAG: $TAG
