@@ -1,8 +1,8 @@
 # Dockerfile for my Node.js web application with Vault secret as a build argument
 
 # Build stage
-# Node.js 18 LTS Alpine image for minimal size
-FROM node:18-alpine AS builder
+# Node.js Alpine image for minimal size
+FROM node:24-alpine AS builder
 
 WORKDIR /app
 
@@ -11,8 +11,8 @@ COPY package.json ./
 RUN npm install --production
 
 # Runtime stage
-# Node.js 18 LTS Alpine image for minimal size
-FROM node:18-alpine AS runtime
+# Node.js Alpine image for minimal size
+FROM node:24-alpine AS runtime
 
 WORKDIR /app
 
@@ -20,7 +20,7 @@ WORKDIR /app
 COPY --from=builder /app/node_modules ./node_modules
 
 # Copy application code
-COPY index.js package.json ./
+COPY src/* ./
 
 # Accept the Vault secret as a build argument
 ARG ASSIGNMENT_SECRET

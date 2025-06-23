@@ -7,7 +7,6 @@
 
 // Import the Express framework and OS module
 const express = require('express');
-const os = require('os');
 
 // Create an Express web app
 const app = express();
