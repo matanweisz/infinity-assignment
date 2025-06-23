@@ -43,11 +43,12 @@ module "vpc" {
   availability_zone_2 = "eu-central-1b"
 }
 
-# Create the EKS Cluster
+
+# Create the EKS Clusters
 module "eks" {
   source          = "terraform-aws-modules/eks/aws"
   version         = "20.37.0"
-  cluster_name    = "${local.project_name}-eks"
+  cluster_name    = "backend-cluster"
   cluster_version = "1.33"
   subnet_ids      = module.vpc.private_subnet_ids
   vpc_id          = module.vpc.vpc_id
@@ -60,7 +61,7 @@ module "eks" {
   eks_managed_node_groups = {
     default_node_group = {
       instance_types = ["t3.medium"]
-      desired_size   = 2
+      desired_size   = 1
       min_size       = 1
       max_size       = 4
     }
@@ -68,6 +69,34 @@ module "eks" {
 
   tags = {
     Environment = "dev"
+    Project     = local.project_name
+  }
+}
+
+module "eks" {
+  source          = "terraform-aws-modules/eks/aws"
+  version         = "20.37.0"
+  cluster_name    = "prod-cluster"
+  cluster_version = "1.33"
+  subnet_ids      = module.vpc.private_subnet_ids
+  vpc_id          = module.vpc.vpc_id
+
+  enable_irsa = true
+
+  cluster_endpoint_private_access = true
+  cluster_endpoint_public_access  = false
+
+  eks_managed_node_groups = {
+    default_node_group = {
+      instance_types = ["t3.medium"]
+      desired_size   = 1
+      min_size       = 1
+      max_size       = 4
+    }
+  }
+
+  tags = {
+    Environment = "prod"
     Project     = local.project_name
   }
 }
