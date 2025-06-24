@@ -6,7 +6,7 @@
  */
 
 // Import the Express framework and OS module
-const express = require('express');
+const express = require("express");
 
 // Create an Express web app
 const app = express();
@@ -24,17 +24,17 @@ app.use((req, res, next) => {
  * Root endpoint
  * Returns a simple welcome message
  */
-app.get('/', (req, res) => {
-  res.send('<h1>Welcome to my Node.js Web Application!</h1>');
+app.get("/", (req, res) => {
+  res.send("<h1>Welcome to my Node.js Web Application!</h1>");
 });
 
 /**
  * Health endpoint
  * Used for Kubernetes probes and health checks
  */
-app.get('/health', (req, res) => {
-  console.log('The /health endpoint was called');
-  res.status(200).send('OK');
+app.get("/health", (req, res) => {
+  console.log("The /health endpoint was called");
+  res.status(200).send("OK");
 });
 
 // Start the server

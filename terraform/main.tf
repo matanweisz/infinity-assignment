@@ -33,7 +33,7 @@ locals {
   enable_bastion = true
 
   # SSH key pair name (must exist in AWS)
-  key_pair_name = "infinity-assignment-key"
+  key_pair_name = "terraform_key_pair"
 
   # AMI ID for Ubuntu 24.04 LTS
   ami_id = "ami-014dd8ec7f09293e6"
