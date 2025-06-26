@@ -12,12 +12,16 @@ This instance is used to manage secrets and sensitive data securely.
 - An AWS EC2 instance.
 - Docker and Docker Compose installed on the instance.
 
+- Change the private IP address in the `docker-compose.yml` file to the private IP address of the EC2 instance.
+
 - Copy the vault-config.hcl file to the instance.
 - Create a directory for Vault data and logs with:
+  ```bash
   mkdir -p ./vault/data
   mkdir -p ./vault/logs
 
   sudo chown -R 100:100 ./vault/data ./vault/logs
+  ```
 
 ## Usage
 
