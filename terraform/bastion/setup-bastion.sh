@@ -70,16 +70,6 @@ sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 kubectl version --client
 echo "kubectl installed successfully"
 
-# Install ekscli
-echo "Installing eksctl..."
-curl -sLO "https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_$PLATFORM.tar.gz"
-tar -xzf eksctl_$PLATFORM.tar.gz -C /tmp && rm eksctl_$PLATFORM.tar.gz
-sudo mv /tmp/eksctl /usr/local/bin
-
-# Verify ekscli installation
-eksctl version
-echo "eksctl installed successfully"
-
 # Install Helm
 echo "Installing Helm..."
 curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
@@ -123,5 +113,5 @@ echo ""
 echo "Next steps:"
 echo "Configure AWS CLI: aws configure"
 echo "Configure kubectl for your clusters:"
-echo "   aws eks update-kubeconfig --region eu-central-1 --name backend-cluster"
-echo "   aws eks update-kubeconfig --region eu-central-1 --name prod-cluster"
+echo "   aws eks update-kubeconfig --region eu-central-1 --name backend-cluster --role-arn arn:aws:iam::536697238781:role/infinity-assignment-bastion-eks-role"
+echo "   aws eks update-kubeconfig --region eu-central-1 --name prod-cluster --role-arn arn:aws:iam::536697238781:role/infinity-assignment-bastion-eks-role"

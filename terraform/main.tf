@@ -327,14 +327,10 @@ resource "aws_iam_role" "bastion_eks_role" {
         Action = "sts:AssumeRole"
         Effect = "Allow"
         Principal = {
-          AWS = aws_iam_role.bastion_instance_role[0].arn
-        }
-      },
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          AWS = "arn:aws:iam::536697238781:user/matan_infinity"
+          AWS = [
+            aws_iam_role.bastion_instance_role[0].arn,      // for EC2 usage
+            "arn:aws:iam::536697238781:user/matan_infinity" // for CLI usage
+          ]
         }
       }
     ]
@@ -363,7 +359,8 @@ resource "aws_iam_policy" "bastion_eks_policy" {
           "eks:DescribeNodegroup",
           "eks:ListNodegroups",
           "eks:DescribeUpdate",
-          "eks:ListUpdates"
+          "eks:ListUpdates",
+          "ec2:DescribeVpcs"
         ]
         Resource = "*"
       }
