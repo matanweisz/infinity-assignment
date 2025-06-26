@@ -3,7 +3,7 @@ services:
     image: gitlab/gitlab-ce:latest
     container_name: gitlab
     restart: always
-    hostname: 'gitlab'
+    hostname: "gitlab"
     environment:
       GITLAB_OMNIBUS_CONFIG: |
         external_url 'https://gitlab.matanweisz.xyz'
@@ -23,7 +23,7 @@ services:
         nginx['real_ip_trusted_addresses'] = ['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16']
         nginx['real_ip_header'] = 'X-Forwarded-For'
         nginx['real_ip_recursive'] = 'on'
-        
+
         gitlab_rails['gitlab_shell_ssh_port'] = 2222
         gitlab_shell['ssh_port'] = 2222
 
@@ -36,17 +36,16 @@ services:
         gitlab_exporter['enable'] = false
 
     ports:
-      - '80:80'
-      - '2222:22'
-      - '5050:5050'
+      - "80:80"
+      - "2222:22"
+      - "5050:5050"
     volumes:
-      - 'gitlab_config:/etc/gitlab'
-      - 'gitlab_logs:/var/log/gitlab'
-      - 'gitlab_data:/var/opt/gitlab'
-    shm_size: '256m'
+      - "gitlab_config:/etc/gitlab"
+      - "gitlab_logs:/var/log/gitlab"
+      - "gitlab_data:/var/opt/gitlab"
+    shm_size: "256m"
 
 volumes:
   gitlab_config:
   gitlab_logs:
   gitlab_data:
-

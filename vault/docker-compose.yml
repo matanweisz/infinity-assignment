@@ -4,28 +4,27 @@ services:
     image: hashicorp/vault:1.15
     container_name: vault-server
     restart: unless-stopped
-    
+
     # Expose Vault API on 8200
     ports:
       - "8200:8200"
-    
+
     environment:
       # Internal Vault client address, used by Vault's CLI
       VAULT_ADDR: http://127.0.0.1:8200
       # Private IP Vault should use internally for communiction with GitLab
       VAULT_API_ADDR: http://10.0.3.136:8200
 
-    
     # Keeps the secrets in RAM and not swap memory
     cap_add:
       - IPC_LOCK
-    
+
     # Mount persistent storage and config
     volumes:
       - vault-data:/vault/data
       - vault-logs:/vault/logs
       - ./vault-config.hcl:/vault/config/vault.hcl:ro
-    
+
     # Command to start Vault with the custom config
     command: ["vault", "server", "-config=/vault/config/vault.hcl"]
 

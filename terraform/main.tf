@@ -322,7 +322,7 @@ module "eks_backend" {
   eks_managed_node_groups = {
     backend_nodes = {
       instance_types = ["t3.medium"]
-      desired_size   = 2
+      desired_size   = 1
       min_size       = 1
       max_size       = 4
 
@@ -386,9 +386,9 @@ module "ubuntu_ec2_gitlab" {
   subnet_id         = element(module.vpc.private_subnet_ids, 0)
   security_group_id = module.security_group_gitlab.security_group_id
   instance_type     = "t3.large"
-  instance_name     = "${local.project_name}-gitlab"
+  instance_name     = "gitlab"
   volume_type       = "gp3"
-  volume_size       = 60
+  volume_size       = 50
   key_name          = local.key_pair_name
 }
 
@@ -398,10 +398,10 @@ module "ubuntu_ec2_vault" {
   ami               = local.ami_id
   subnet_id         = element(module.vpc.private_subnet_ids, 0)
   security_group_id = module.security_group_vault.security_group_id
-  instance_type     = "t3.large"
-  instance_name     = "${local.project_name}-vault"
+  instance_type     = "t3.medium"
+  instance_name     = "vault"
   volume_type       = "gp3"
-  volume_size       = 30
+  volume_size       = 15
   key_name          = local.key_pair_name
 }
 
@@ -414,7 +414,7 @@ module "ubuntu_ec2_bastion" {
   subnet_id         = element(module.vpc.public_subnet_ids, 0)
   security_group_id = module.security_group_bastion[0].security_group_id
   instance_type     = "t3.micro"
-  instance_name     = "${local.project_name}-bastion"
+  instance_name     = "bastion"
   volume_type       = "gp3"
   volume_size       = 10
   key_name          = local.key_pair_name
