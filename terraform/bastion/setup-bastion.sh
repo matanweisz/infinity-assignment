@@ -64,12 +64,21 @@ echo "Installing kubectl..."
 KUBECTL_VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt)
 curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
 
-# Install kubectl
 sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 
 # Verify kubectl installation
 kubectl version --client
 echo "kubectl installed successfully"
+
+# Install ekscli
+echo "Installing eksctl..."
+curl -sLO "https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_$PLATFORM.tar.gz"
+tar -xzf eksctl_$PLATFORM.tar.gz -C /tmp && rm eksctl_$PLATFORM.tar.gz
+sudo mv /tmp/eksctl /usr/local/bin
+
+# Verify ekscli installation
+eksctl version
+echo "eksctl installed successfully"
 
 # Install Helm
 echo "Installing Helm..."
@@ -84,8 +93,6 @@ echo "Installing ArgoCD CLI..."
 # Get latest ArgoCD version
 ARGOCD_VERSION=$(curl -s https://api.github.com/repos/argoproj/argo-cd/releases/latest | jq -r .tag_name)
 curl -sSL -o argocd-linux-amd64 "https://github.com/argoproj/argo-cd/releases/download/${ARGOCD_VERSION}/argocd-linux-amd64"
-
-# Install ArgoCD CLI
 sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
 rm argocd-linux-amd64
 
@@ -99,7 +106,6 @@ echo "Installing Vault CLI..."
 VAULT_VERSION=$(curl -s https://api.github.com/repos/hashicorp/vault/releases/latest | jq -r .tag_name | sed 's/v//')
 curl -sSL -o vault.zip "https://releases.hashicorp.com/vault/${VAULT_VERSION}/vault_${VAULT_VERSION}_linux_amd64.zip"
 
-# Install Vault CLI
 unzip vault.zip
 sudo install -m 755 vault /usr/local/bin/vault
 rm vault vault.zip
@@ -111,8 +117,6 @@ echo "Vault CLI installed successfully"
 # Clean up
 echo "Cleaning up temporary files..."
 rm -rf /tmp/aws /tmp/awscliv2.zip kubectl
-
-exec bash
 
 echo "Bastion host setup completed successfully!"
 echo ""
