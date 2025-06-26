@@ -16,12 +16,11 @@ This instance is used to manage secrets and sensitive data securely.
 
 - Copy the vault-config.hcl file to the instance.
 - Create a directory for Vault data and logs with:
-  ```bash
-  mkdir -p ./vault/data
-  mkdir -p ./vault/logs
 
-  sudo chown -R 100:100 ./vault/data ./vault/logs
-  ```
+```bash
+mkdir -p ./vault/data
+mkdir -p ./vault/logs
+```
 
 ## Usage
 

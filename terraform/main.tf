@@ -222,6 +222,19 @@ resource "aws_security_group_rule" "bastion_to_vault_ssh" {
   source_security_group_id = module.security_group_bastion[0].security_group_id
 }
 
+# Bastion to EKS API Server (HTTPS)
+resource "aws_security_group_rule" "bastion_to_eks_api" {
+  count = local.enable_bastion ? 1 : 0
+
+  type              = "egress"
+  from_port         = 443
+  to_port           = 443
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = module.security_group_bastion[0].security_group_id
+  description       = "Allow bastion to access EKS API servers"
+}
+
 # =============================================================================
 # SECURITY GROUP RULES - OUTBOUND TRAFFIC
 # =============================================================================
@@ -298,6 +311,217 @@ resource "aws_security_group_rule" "eks_outbound" {
 }
 
 # =============================================================================
+# BASTION EKS MANAGEMENT ADDITIONS
+# =============================================================================
+
+# IAM Role for Bastion Host to assume for EKS management
+resource "aws_iam_role" "bastion_eks_role" {
+  count = local.enable_bastion ? 1 : 0
+
+  name = "${local.project_name}-bastion-eks-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          AWS = aws_iam_role.bastion_instance_role[0].arn
+        }
+      },
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::536697238781:user/matan_infinity"
+        }
+      }
+    ]
+  })
+
+  tags = {
+    Name = "${local.project_name}-bastion-eks-role"
+  }
+}
+
+# IAM Policy for EKS cluster management
+resource "aws_iam_policy" "bastion_eks_policy" {
+  count = local.enable_bastion ? 1 : 0
+
+  name        = "${local.project_name}-bastion-eks-policy"
+  description = "Policy for bastion host to manage EKS clusters"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "eks:DescribeCluster",
+          "eks:ListClusters",
+          "eks:DescribeNodegroup",
+          "eks:ListNodegroups",
+          "eks:DescribeUpdate",
+          "eks:ListUpdates"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# Attach policy to bastion EKS role
+resource "aws_iam_role_policy_attachment" "bastion_eks_policy_attachment" {
+  count = local.enable_bastion ? 1 : 0
+
+  role       = aws_iam_role.bastion_eks_role[0].name
+  policy_arn = aws_iam_policy.bastion_eks_policy[0].arn
+}
+
+# IAM Instance Role for Bastion Host
+resource "aws_iam_role" "bastion_instance_role" {
+  count = local.enable_bastion ? 1 : 0
+
+  name = "${local.project_name}-bastion-instance-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = {
+    Name = "${local.project_name}-bastion-instance-role"
+  }
+}
+
+# IAM Policy for Bastion Instance (allows assuming EKS role)
+resource "aws_iam_policy" "bastion_instance_policy" {
+  count = local.enable_bastion ? 1 : 0
+
+  name        = "${local.project_name}-bastion-instance-policy"
+  description = "Policy for bastion instance to assume EKS management role"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "sts:AssumeRole"
+        ]
+        Resource = aws_iam_role.bastion_eks_role[0].arn
+      }
+    ]
+  })
+}
+
+# Attach policy to bastion instance role
+resource "aws_iam_role_policy_attachment" "bastion_instance_policy_attachment" {
+  count = local.enable_bastion ? 1 : 0
+
+  role       = aws_iam_role.bastion_instance_role[0].name
+  policy_arn = aws_iam_policy.bastion_instance_policy[0].arn
+}
+
+# IAM Instance Profile for Bastion Host
+resource "aws_iam_instance_profile" "bastion_profile" {
+  count = local.enable_bastion ? 1 : 0
+
+  name = "${local.project_name}-bastion-profile"
+  role = aws_iam_role.bastion_instance_role[0].name
+}
+
+# =============================================================================
+# EKS CLUSTER AUTH CONFIGURATION
+# =============================================================================
+
+# Add bastion EKS role to backend cluster auth
+resource "aws_eks_access_entry" "bastion_backend_access" {
+  count = local.enable_bastion ? 1 : 0
+
+  cluster_name  = module.eks_backend.cluster_name
+  principal_arn = aws_iam_role.bastion_eks_role[0].arn
+  type          = "STANDARD"
+
+  depends_on = [module.eks_backend]
+}
+
+# Associate cluster admin policy with bastion backend access
+resource "aws_eks_access_policy_association" "bastion_backend_admin" {
+  count = local.enable_bastion ? 1 : 0
+
+  cluster_name  = module.eks_backend.cluster_name
+  principal_arn = aws_iam_role.bastion_eks_role[0].arn
+  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+
+  access_scope {
+    type = "cluster"
+  }
+
+  depends_on = [aws_eks_access_entry.bastion_backend_access]
+}
+
+# Add bastion EKS role to prod cluster auth
+resource "aws_eks_access_entry" "bastion_prod_access" {
+  count = local.enable_bastion ? 1 : 0
+
+  cluster_name  = module.eks_prod.cluster_name
+  principal_arn = aws_iam_role.bastion_eks_role[0].arn
+  type          = "STANDARD"
+
+  depends_on = [module.eks_prod]
+}
+
+# Associate cluster admin policy with bastion prod access
+resource "aws_eks_access_policy_association" "bastion_prod_admin" {
+  count = local.enable_bastion ? 1 : 0
+
+  cluster_name  = module.eks_prod.cluster_name
+  principal_arn = aws_iam_role.bastion_eks_role[0].arn
+  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+
+  access_scope {
+    type = "cluster"
+  }
+
+  depends_on = [aws_eks_access_entry.bastion_prod_access]
+}
+
+# =============================================================================
+# BASTION EC2 INSTANCE
+# =============================================================================
+
+resource "aws_instance" "bastion" {
+  count = local.enable_bastion ? 1 : 0
+
+  ami                    = local.ami_id
+  instance_type          = "t3.medium"
+  key_name               = local.key_pair_name
+  subnet_id              = element(module.vpc.public_subnet_ids, 0)
+  vpc_security_group_ids = [module.security_group_bastion[0].security_group_id]
+  iam_instance_profile   = aws_iam_instance_profile.bastion_profile[0].name
+
+  root_block_device {
+    volume_type = "gp3"
+    volume_size = 15
+    encrypted   = true
+  }
+
+  tags = {
+    Name = "bastion"
+  }
+}
+
+# =============================================================================
 # EKS CLUSTERS
 # =============================================================================
 
@@ -338,7 +562,7 @@ module "eks_backend" {
   }
 }
 
-# Production EKS Cluster (Web App only)
+# Production EKS Cluster (WebApp only)
 module "eks_prod" {
   source  = "terraform-aws-modules/eks/aws"
   version = "20.37.0"
@@ -401,22 +625,7 @@ module "ubuntu_ec2_vault" {
   instance_type     = "t3.medium"
   instance_name     = "vault"
   volume_type       = "gp3"
-  volume_size       = 15
-  key_name          = local.key_pair_name
-}
-
-# Bastion Host
-module "ubuntu_ec2_bastion" {
-  count = local.enable_bastion ? 1 : 0
-
-  source            = "./modules/ubuntu_ec2"
-  ami               = local.ami_id
-  subnet_id         = element(module.vpc.public_subnet_ids, 0)
-  security_group_id = module.security_group_bastion[0].security_group_id
-  instance_type     = "t3.micro"
-  instance_name     = "bastion"
-  volume_type       = "gp3"
-  volume_size       = 10
+  volume_size       = 50
   key_name          = local.key_pair_name
 }
 
