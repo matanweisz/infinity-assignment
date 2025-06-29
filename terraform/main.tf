@@ -8,6 +8,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.37.1"
+    }
   }
 }
 
@@ -548,7 +552,10 @@ module "eks_backend" {
       max_size       = 4
 
       # Add additional security group to node group
-      vpc_security_group_ids = [aws_security_group.eks_additional.id]
+      vpc_security_group_ids = [
+        aws_security_group.eks_additional.id,
+        module.security_group_bastion[0].security_group_id
+      ]
     }
   }
 
@@ -575,7 +582,10 @@ module "eks_prod" {
   cluster_endpoint_public_access  = false
 
   # Add additional security group for limited service communication
-  cluster_additional_security_group_ids = [aws_security_group.eks_additional.id]
+  cluster_additional_security_group_ids = [
+    aws_security_group.eks_additional.id,
+    module.security_group_bastion[0].security_group_id
+  ]
 
   eks_managed_node_groups = {
     prod_nodes = {
@@ -594,6 +604,73 @@ module "eks_prod" {
     Project     = local.project_name
     Role        = "WebApp"
   }
+}
+
+# -------------------------
+# IRSA for AWS Load Balancer Controller - BACKEND CLUSTER
+# -------------------------
+
+data "aws_iam_policy_document" "backend_alb_assume_role_policy" {
+  statement {
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+
+    principals {
+      type        = "Federated"
+      identifiers = [module.eks_backend.oidc_provider_arn]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "${module.eks_backend.oidc_provider}:sub"
+      values   = ["system:serviceaccount:kube-system:aws-load-balancer-controller"]
+    }
+  }
+}
+
+resource "aws_iam_role" "backend_alb_controller" {
+  name               = "backend-alb-controller-role"
+  assume_role_policy = data.aws_iam_policy_document.backend_alb_assume_role_policy.json
+}
+
+resource "aws_iam_policy" "alb_controller" {
+  name   = "AWSLoadBalancerControllerIAMPolicy"
+  policy = file("${path.module}/AWSLoadBalancerControllerIAMPolicy.json")
+}
+
+resource "aws_iam_role_policy_attachment" "backend_alb_attach" {
+  role       = aws_iam_role.backend_alb_controller.name
+  policy_arn = aws_iam_policy.alb_controller.arn
+}
+
+# -------------------------
+# IRSA for AWS Load Balancer Controller - PROD CLUSTER
+# -------------------------
+
+data "aws_iam_policy_document" "prod_alb_assume_role_policy" {
+  statement {
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+
+    principals {
+      type        = "Federated"
+      identifiers = [module.eks_prod.oidc_provider_arn]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "${module.eks_prod.oidc_provider}:sub"
+      values   = ["system:serviceaccount:kube-system:aws-load-balancer-controller"]
+    }
+  }
+}
+
+resource "aws_iam_role" "prod_alb_controller" {
+  name               = "prod-alb-controller-role"
+  assume_role_policy = data.aws_iam_policy_document.prod_alb_assume_role_policy.json
+}
+
+resource "aws_iam_role_policy_attachment" "prod_alb_attach" {
+  role       = aws_iam_role.prod_alb_controller.name
+  policy_arn = aws_iam_policy.alb_controller.arn
 }
 
 # =============================================================================

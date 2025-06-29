@@ -1,61 +1,95 @@
 #!/bin/bash
 
-# AWS Load Balancer Controller Install Script for EKS Cluster
+set -euo pipefail # fail on error
 
-# --------- Configuration Variables ---------
+# -----------------------------------
+# CONFIG: update for each cluster run
+# -----------------------------------
 PROJECT_NAME="infinity-assignment"
-CLUSTER_NAME="backend-cluster"
+CLUSTER_NAME="prod-cluster"
 AWS_REGION="eu-central-1"
 SERVICE_ACCOUNT_NAME="aws-load-balancer-controller"
 NAMESPACE="kube-system"
-CHART_VERSION="1.7.1"         # Latest stable as of writing
-CONTROLLER_IMAGE_TAG="v2.7.1" # Match with Helm chart version
-VPC_ID="vpc-0890523b650026664"
+CHART_VERSION="1.7.1"
+CONTROLLER_IMAGE_TAG="v2.7.1"
 
-# Construct IAM Role ARN dynamically using project name
+# -----------------------------------
+# 1. Get AWS account & OIDC info
+# -----------------------------------
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-IAM_ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/${PROJECT_NAME}-lb-controller-role"
+echo "Using AWS Account: ${ACCOUNT_ID}"
 
-# --------- Fetch VPC ID Automatically ---------
-VPC_ID=$(aws ec2 describe-vpcs \
-    --filters "Name=tag:Name,Values=*${PROJECT_NAME}-vpc*" \
-    --query "Vpcs[0].VpcId" \
-    --output text \
-    --region $AWS_REGION)
+# Optional sanity check:
+echo "Getting cluster OIDC provider..."
+OIDC_PROVIDER=$(aws eks describe-cluster \
+    --name ${CLUSTER_NAME} \
+    --region ${AWS_REGION} \
+    --query "cluster.identity.oidc.issuer" \
+    --output text | sed 's~https://~~')
+echo "OIDC Provider: $OIDC_PROVIDER"
 
-if [[ $VPC_ID == "None" || -z "$VPC_ID" ]]; then
-    echo "VPC not found with name containing: ${PROJECT_NAME}-vpc"
+# IAM Role ARN should match the cluster:
+IAM_ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/${PROJECT_NAME}-${CLUSTER_NAME}-alb-controller-role"
+echo "Using IAM Role: $IAM_ROLE_ARN"
+
+# -----------------------------------
+# 2. Get VPC ID automatically
+# -----------------------------------
+VPC_ID=$(aws eks describe-cluster \
+    --name ${CLUSTER_NAME} \
+    --region ${AWS_REGION} \
+    --query "cluster.resourcesVpcConfig.vpcId" \
+    --output text)
+
+if [[ -z "$VPC_ID" || "$VPC_ID" == "None" ]]; then
+    echo "ERROR: VPC ID could not be determined for cluster $CLUSTER_NAME"
     exit 1
 fi
 
-# --------- 1. Create Namespace (if not exists) ---------
+echo "Using VPC ID: $VPC_ID"
+
+# -----------------------------------
+# 3. Create namespace & ServiceAccount
+# -----------------------------------
 kubectl get namespace $NAMESPACE >/dev/null 2>&1 || kubectl create namespace $NAMESPACE
 
-# --------- 2. Create Service Account ---------
-kubectl get serviceaccount $SERVICE_ACCOUNT_NAME -n $NAMESPACE >/dev/null 2>&1 ||
-    kubectl create serviceaccount $SERVICE_ACCOUNT_NAME -n $NAMESPACE
+if ! kubectl get sa $SERVICE_ACCOUNT_NAME -n $NAMESPACE >/dev/null 2>&1; then
+    kubectl create sa $SERVICE_ACCOUNT_NAME -n $NAMESPACE
+    echo "Created ServiceAccount $SERVICE_ACCOUNT_NAME"
+else
+    echo "ServiceAccount $SERVICE_ACCOUNT_NAME already exists"
+fi
 
-# --------- 3. Annotate Service Account with IAM Role ---------
-kubectl annotate serviceaccount $SERVICE_ACCOUNT_NAME \
+# -----------------------------------
+# 4. Annotate SA with IAM Role
+# -----------------------------------
+kubectl annotate sa $SERVICE_ACCOUNT_NAME \
     -n $NAMESPACE \
-    eks.amazonaws.com/role-arn=$IAM_ROLE_ARN \
+    "eks.amazonaws.com/role-arn=${IAM_ROLE_ARN}" \
     --overwrite
 
-# --------- 4. Add and Update Helm Repo ---------
-helm repo add eks https://aws.github.io/eks-charts
+echo "Annotated ServiceAccount with IAM Role"
+
+# -----------------------------------
+# 5. Helm repo & upgrade/install
+# -----------------------------------
+helm repo add eks https://aws.github.io/eks-charts || true
 helm repo update
 
-# --------- 5. Install ALB Controller via Helm ---------
-helm upgrade --install $SERVICE_ACCOUNT_NAME eks/aws-load-balancer-controller \
+helm upgrade --install aws-load-balancer-controller eks/aws-load-balancer-controller \
     -n $NAMESPACE \
     --set clusterName=$CLUSTER_NAME \
-    --set serviceAccount.create=false \
-    --set serviceAccount.name=$SERVICE_ACCOUNT_NAME \
     --set region=$AWS_REGION \
     --set vpcId=$VPC_ID \
+    --set serviceAccount.create=false \
+    --set serviceAccount.name=$SERVICE_ACCOUNT_NAME \
     --set image.tag=$CONTROLLER_IMAGE_TAG \
     --version $CHART_VERSION
 
-kubectl get deployment -n kube-system aws-load-balancer-controller
+# -----------------------------------
+# 6. Confirm Deployment
+# -----------------------------------
+echo "ALB Ingress Controller status:"
+kubectl rollout status deployment/aws-load-balancer-controller -n $NAMESPACE
 
-echo "ALB Ingress Controller installation completed for cluster: $CLUSTER_NAME"
+echo "ALB Ingress Controller installation complete for cluster: $CLUSTER_NAME"
