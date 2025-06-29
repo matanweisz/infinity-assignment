@@ -5,15 +5,18 @@ metadata:
   name: argocd-manager
   namespace: kube-system
 ---
+# Cluster Role for argocd-manager
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: argocd-manager-role
+# Rules to allow argocd-manager to get all the resources in the cluster
 rules:
   - apiGroups: ["*"]
     resources: ["*"]
     verbs: ["*"]
 ---
+# Cluster Role Binding for argocd-manager
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
