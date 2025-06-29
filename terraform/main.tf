@@ -606,9 +606,9 @@ module "eks_prod" {
   }
 }
 
-# -------------------------
+# =============================================================================
 # IRSA for AWS Load Balancer Controller - BACKEND CLUSTER
-# -------------------------
+# =============================================================================
 
 data "aws_iam_policy_document" "backend_alb_assume_role_policy" {
   statement {
@@ -642,9 +642,9 @@ resource "aws_iam_role_policy_attachment" "backend_alb_attach" {
   policy_arn = aws_iam_policy.alb_controller.arn
 }
 
-# -------------------------
+# =============================================================================
 # IRSA for AWS Load Balancer Controller - PROD CLUSTER
-# -------------------------
+# =============================================================================
 
 data "aws_iam_policy_document" "prod_alb_assume_role_policy" {
   statement {
